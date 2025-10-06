@@ -62,24 +62,34 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
+      useFactory: async (configService: ConfigService) => {
         const databaseUrl = configService.get('DATABASE_URL');
-        const sslEnabled = configService.get('DB_SSL_ENABLED', 'true') === 'true';
-        
-        const extraConfig = {
-          extra: {
-            family: 4, // Force IPv4 - Render doesn't support IPv6
-            connectionTimeoutMillis: 10000,
-          },
-          ssl: { 
-            rejectUnauthorized: false, 
-          },
-        };
         
         if (databaseUrl) {
+          // Parse the DATABASE_URL to extract components
+          const url = new URL(databaseUrl);
+          
+          // Manually resolve hostname to IPv4 only
+          const dns = require('dns').promises;
+          let resolvedHost = url.hostname;
+          
+          try {
+            const addresses = await dns.resolve4(url.hostname);
+            if (addresses && addresses.length > 0) {
+              resolvedHost = addresses[0]; // Use first IPv4 address
+              console.log(`Resolved ${url.hostname} to IPv4: ${resolvedHost}`);
+            }
+          } catch (error) {
+            console.warn(`DNS resolution failed, using hostname: ${url.hostname}`, error);
+          }
+          
           return {
             type: 'postgres',
-            url: databaseUrl,
+            host: resolvedHost,
+            port: parseInt(url.port || '5432', 10),
+            username: url.username,
+            password: url.password,
+            database: url.pathname.slice(1),
             entities: [
               Navigation,
               Category,
@@ -93,7 +103,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
             ],
             synchronize: false,
             logging: false,
-            ...extraConfig, 
+            extra: {
+              connectionTimeoutMillis: 10000,
+            },
+            ssl: { 
+              rejectUnauthorized: false, 
+            },
           };
         }
         
@@ -117,7 +132,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           ],
           synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
           logging: configService.get('DB_LOGGING') === 'true',
-          ...extraConfig, 
+          extra: {
+            connectionTimeoutMillis: 10000,
+          },
+          ssl: { 
+            rejectUnauthorized: false, 
+          },
         };
       },
       inject: [ConfigService],
