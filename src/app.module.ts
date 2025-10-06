@@ -70,9 +70,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           extra: {
             family: 4, // Force IPv4 only
             connectionTimeoutMillis: 10000,
-            // ssl: { 
-            //   rejectUnauthorized: false, 
-            // }, // 10 second timeout
+            ssl: { 
+              rejectUnauthorized: false, 
+            }, // 10 second timeout
           }
         };
         
