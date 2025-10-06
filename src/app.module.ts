@@ -65,6 +65,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get('DATABASE_URL');
         
+        // Add this extra configuration to force IPv4
+        const extraConfig = {
+          extra: {
+            family: 4, // Force IPv4 only
+            connectionTimeoutMillis: 10000, // 10 second timeout
+          }
+        };
+        
         if (databaseUrl) {
           // Use DATABASE_URL if provided (recommended for production)
           return {
@@ -86,6 +94,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
             ssl: {
               rejectUnauthorized: false,
             },
+            ...extraConfig, // Add the IPv4 fix here
           };
         }
         
@@ -113,6 +122,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           ssl: {
             rejectUnauthorized: false,
           },
+          ...extraConfig, // Add the IPv4 fix here too
         };
       },
       inject: [ConfigService],
