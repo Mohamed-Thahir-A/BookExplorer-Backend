@@ -65,7 +65,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get('DATABASE_URL');
         
-        // Add this extra configuration to force IPv4
+        
         const extraConfig = {
           extra: {
             family: 4, // Force IPv4 only
@@ -74,8 +74,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         };
         
         if (databaseUrl) {
-          // Use DATABASE_URL if provided (recommended for production)
-          return {
+         return {
             type: 'postgres',
             url: databaseUrl,
             entities: [
@@ -91,14 +90,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
             ],
             synchronize: false,
             logging: false,
-            ssl: {
-              rejectUnauthorized: false,
+            ssl: { 
+              rejectUnauthorized: false, 
             },
-            ...extraConfig, // Add the IPv4 fix here
+            ...extraConfig, 
           };
         }
         
-        // Fallback to individual environment variables
+       
         return {
           type: 'postgres',
           host: configService.get('DB_HOST'),
@@ -119,10 +118,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           ],
           synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
           logging: configService.get('DB_LOGGING') === 'true',
-          ssl: {
-            rejectUnauthorized: false,
-          },
-          ...extraConfig, // Add the IPv4 fix here too
+         ssl:
+            configService.get('DB_SSL_ENABLED') === 'false'
+              ? false
+              : { rejectUnauthorized: false },
+          ...extraConfig, 
         };
       },
       inject: [ConfigService],
