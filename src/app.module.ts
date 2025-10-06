@@ -69,7 +69,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         const extraConfig = {
           extra: {
             family: 4, // Force IPv4 only
-            connectionTimeoutMillis: 10000, // 10 second timeout
+            connectionTimeoutMillis: 10000,
+            ssl: { 
+              rejectUnauthorized: false, 
+            }, // 10 second timeout
           }
         };
         
@@ -90,9 +93,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
             ],
             synchronize: false,
             logging: false,
-            ssl: { 
-              rejectUnauthorized: false, 
-            },
+            
             ...extraConfig, 
           };
         }
