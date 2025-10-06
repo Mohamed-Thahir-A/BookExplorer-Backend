@@ -118,10 +118,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           ],
           synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
           logging: configService.get('DB_LOGGING') === 'true',
-         ssl:
-            configService.get('DB_SSL_ENABLED') === 'false'
-              ? false
-              : { rejectUnauthorized: false },
+          ssl: {
+            rejectUnauthorized: false,
+          },
           ...extraConfig, 
         };
       },
