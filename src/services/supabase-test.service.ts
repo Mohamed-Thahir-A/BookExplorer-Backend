@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseTestService {
-  private supabase;
+  private supabase: SupabaseClient;
 
   constructor() {
     this.supabase = createClient(
@@ -14,32 +14,22 @@ export class SupabaseTestService {
 
   async testConnection() {
     try {
-      console.log('🧪 Testing Supabase database connection...');
-      
-      const { data: products, error: productError } = await this.supabase.from('product').select('*');
-      if (productError) throw productError;
-      
-      const { data: categories, error: categoryError } = await this.supabase.from('category').select('*');
-      if (categoryError) throw categoryError;
-      
-      const { data: users, error: userError } = await this.supabase.from('user').select('*');
-      if (userError) throw userError;
+      const { data: products, error: pError } = await this.supabase.from('product').select('*');
+      const { data: categories, error: cError } = await this.supabase.from('category').select('*');
+      const { data: users, error: uError } = await this.supabase.from('user').select('*');
+
+      if (pError || cError || uError) throw new Error(pError?.message || cError?.message || uError?.message);
 
       return {
         success: true,
-        message: '✅ Connected to Supabase successfully! All tables are accessible.',
         counts: {
           products: products.length,
           categories: categories.length,
           users: users.length,
         },
       };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        suggestion: 'Check table names, RLS policies, and service key in environment variables.',
-      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   }
 }

@@ -28,28 +28,17 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    // Global environment configuration
     ConfigModule.forRoot({ isGlobal: true }),
-
-    // JWT setup using ConfigService (fixed injection error)
     JwtModule.registerAsync({
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'fallback-secret',
         signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d' },
       }),
-      inject: [ConfigService], // <-- THIS MUST BE ConfigService, not ConfigModule
+      inject: [ConfigService],
     }),
-
     PassportModule,
-
-    // Global cache
-    CacheModule.register({
-      isGlobal: true,
-      ttl: 300000,
-      max: 100,
-    }),
+    CacheModule.register({ isGlobal: true, ttl: 300000, max: 100 }),
   ],
-
   controllers: [
     NavigationController,
     CategoriesController,
@@ -60,7 +49,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     WishlistController,
     SupabaseTestController,
   ],
-
   providers: [
     NavigationService,
     CategoriesService,
