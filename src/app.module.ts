@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
@@ -28,22 +28,28 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
+    // Global environment configuration
     ConfigModule.forRoot({ isGlobal: true }),
+
+    // JWT setup using ConfigService (fixed injection error)
     JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService) => ({
-        secret: configService.get('JWT_SECRET') || 'fallback-secret',
-        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN') || '7d' },
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'fallback-secret',
+        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d' },
       }),
-      inject: [ConfigModule],
+      inject: [ConfigService], // <-- THIS MUST BE ConfigService, not ConfigModule
     }),
+
     PassportModule,
+
+    // Global cache
     CacheModule.register({
       isGlobal: true,
       ttl: 300000,
       max: 100,
     }),
   ],
+
   controllers: [
     NavigationController,
     CategoriesController,
@@ -54,6 +60,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     WishlistController,
     SupabaseTestController,
   ],
+
   providers: [
     NavigationService,
     CategoriesService,
@@ -69,6 +76,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 })
 export class AppModule {
   constructor() {
-    console.log('Backend initialized successfully with Supabase JS client');
+    console.log('✅ Backend initialized successfully with Supabase JS client');
   }
 }
