@@ -1,12 +1,12 @@
-import { Controller, Get } from '@nestjs/common'
-import { SupabaseTestService } from '../services/supabase-test.service'
+import { Controller, Get } from '@nestjs/common';
+import { SupabaseTestService } from '../services/supabase-test.service';
 
 @Controller('supabase-test')
 export class SupabaseTestController {
-  constructor(private readonly supabaseTestService: SupabaseTestService) {}
+  constructor(private readonly supabaseService: SupabaseTestService) {}
 
-  @Get('connection')
-  async testConnection() {
-    return this.supabaseTestService.testConnection()
+  @Get()
+  async test() {
+    return this.supabaseService.testConnection();
   }
 }
