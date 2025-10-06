@@ -63,16 +63,40 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        // Build connection URL to force IPv4
-        const host = configService.get('DB_HOST');
-        const port = configService.get('DB_PORT', '5432');
-        const username = configService.get('DB_USERNAME');
-        const password = configService.get('DB_PASSWORD');
-        const database = configService.get('DB_NAME');
+        const databaseUrl = configService.get('DATABASE_URL');
         
+        if (databaseUrl) {
+          // Use DATABASE_URL if provided (recommended for production)
+          return {
+            type: 'postgres',
+            url: databaseUrl,
+            entities: [
+              Navigation,
+              Category,
+              Product,
+              ProductDetail,
+              ScrapeJob,
+              ViewHistory,
+              User,
+              Wishlist,
+              Book,
+            ],
+            synchronize: false,
+            logging: false,
+            ssl: {
+              rejectUnauthorized: false,
+            },
+          };
+        }
+        
+        // Fallback to individual environment variables
         return {
           type: 'postgres',
-          url: `postgresql://${username}:${password}@${host}:${port}/${database}?sslmode=require`,
+          host: configService.get('DB_HOST'),
+          port: parseInt(configService.get('DB_PORT', '5432'), 10),
+          username: configService.get('DB_USERNAME'),
+          password: configService.get('DB_PASSWORD'),
+          database: configService.get('DB_NAME'),
           entities: [
             Navigation,
             Category,
@@ -88,11 +112,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           logging: configService.get('DB_LOGGING') === 'true',
           ssl: {
             rejectUnauthorized: false,
-          },
-          extra: {
-            connectionTimeoutMillis: 10000,
-            query_timeout: 10000,
-            statement_timeout: 10000,
           },
         };
       },
