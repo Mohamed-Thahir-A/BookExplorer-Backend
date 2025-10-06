@@ -85,6 +85,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         ssl: {
           rejectUnauthorized: false, // Required for Supabase
         },
+        extra: {
+          // Force IPv4 connection to avoid ENETUNREACH errors
+          family: 4,
+        },
       }),
       inject: [ConfigService],
     }),
