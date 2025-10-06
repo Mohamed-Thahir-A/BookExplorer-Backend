@@ -4,8 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { SupabaseTestService } from './services/supabase-test.service'
-import { SupabaseTestController } from './controllers/supabase-test.controller'
+
+import { SupabaseTestService } from './services/supabase-test.service';
+import { SupabaseTestController } from './controllers/supabase-test.controller';
 
 import { User } from './entities/user.entity';
 import { Navigation } from './entities/navigation.entity';
@@ -39,38 +40,35 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
+      isGlobal: true, // use environment variables from Render
     }),
-    
+
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get('JWT_SECRET') || 'your-fallback-secret-key-change-in-production',
-        signOptions: { 
-          expiresIn: configService.get('JWT_EXPIRES_IN') || '7d' 
-        },
+        secret: configService.get('JWT_SECRET'),
+        signOptions: { expiresIn: configService.get('JWT_EXPIRES_IN') },
       }),
       inject: [ConfigService],
     }),
-    
+
     PassportModule,
-    
+
     CacheModule.register({
       isGlobal: true,
       ttl: 300000,
-      max: 100, 
+      max: 100,
     }),
-    
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DB_HOST', 'db.oajxxioqbowpmgjccxvn.supabase.co'),
-        port: +configService.get('DB_PORT', 5432),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'Th@h!rmd123'),
-        database: configService.get('DB_NAME', 'postgres'),
+        host: configService.get('DB_HOST'),
+        port: parseInt(configService.get('DB_PORT', '5432'), 10),
+        username: configService.get('DB_USERNAME'),
+        password: configService.get('DB_PASSWORD'),
+        database: configService.get('DB_NAME'),
         entities: [
           Navigation,
           Category,
@@ -82,14 +80,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           Wishlist,
           Book,
         ],
-        synchronize: configService.get('DB_SYNCHRONIZE', 'true') === 'true',
-        logging: configService.get('DB_LOGGING', 'true') === 'true',
-        ssl: true, // Supabase requires SSL
-        extra: {
-          ssl: {
-            rejectUnauthorized: false // Required for Supabase
-          }
-        }
+        synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+        logging: configService.get('DB_LOGGING') === 'true',
+        ssl: {
+          rejectUnauthorized: false, // Required for Supabase
+        },
       }),
       inject: [ConfigService],
     }),
