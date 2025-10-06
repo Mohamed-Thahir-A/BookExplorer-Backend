@@ -64,20 +64,20 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get('DATABASE_URL');
-        
+        const sslEnabled = configService.get('DB_SSL_ENABLED', 'true') === 'true';
         
         const extraConfig = {
           extra: {
-            family: 4, // Force IPv4 only
+            family: 4, // Force IPv4 - Render doesn't support IPv6
             connectionTimeoutMillis: 10000,
-            // ssl: { 
-            //   rejectUnauthorized: false, 
-            // }, // 10 second timeout
-          }
+          },
+          ssl: { 
+            rejectUnauthorized: false, 
+          },
         };
         
         if (databaseUrl) {
-         return {
+          return {
             type: 'postgres',
             url: databaseUrl,
             entities: [
@@ -93,12 +93,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
             ],
             synchronize: false,
             logging: false,
-            
             ...extraConfig, 
           };
         }
         
-       
         return {
           type: 'postgres',
           host: configService.get('DB_HOST'),
@@ -119,7 +117,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           ],
           synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
           logging: configService.get('DB_LOGGING') === 'true',
-          
           ...extraConfig, 
         };
       },
