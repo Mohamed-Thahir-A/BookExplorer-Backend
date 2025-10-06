@@ -40,7 +40,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // use environment variables from Render
+      isGlobal: true,
     }),
 
     JwtModule.registerAsync({
@@ -62,34 +62,40 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: parseInt(configService.get('DB_PORT', '5432'), 10),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
-        entities: [
-          Navigation,
-          Category,
-          Product,
-          ProductDetail,
-          ScrapeJob,
-          ViewHistory,
-          User,
-          Wishlist,
-          Book,
-        ],
-        synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
-        logging: configService.get('DB_LOGGING') === 'true',
-        ssl: {
-          rejectUnauthorized: false, // Required for Supabase
-        },
-        extra: {
-          // Force IPv4 connection to avoid ENETUNREACH errors
-          family: 4,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        // Build connection URL to force IPv4
+        const host = configService.get('DB_HOST');
+        const port = configService.get('DB_PORT', '5432');
+        const username = configService.get('DB_USERNAME');
+        const password = configService.get('DB_PASSWORD');
+        const database = configService.get('DB_NAME');
+        
+        return {
+          type: 'postgres',
+          url: `postgresql://${username}:${password}@${host}:${port}/${database}?sslmode=require`,
+          entities: [
+            Navigation,
+            Category,
+            Product,
+            ProductDetail,
+            ScrapeJob,
+            ViewHistory,
+            User,
+            Wishlist,
+            Book,
+          ],
+          synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+          logging: configService.get('DB_LOGGING') === 'true',
+          ssl: {
+            rejectUnauthorized: false,
+          },
+          extra: {
+            connectionTimeoutMillis: 10000,
+            query_timeout: 10000,
+            statement_timeout: 10000,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
