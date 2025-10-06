@@ -1,0 +1,1 @@
+{"version":3,"file":"reviews.controller.js","sourceRoot":"","sources":["../../src/controllers/reviews.controller.ts"],"names":[],"mappings":";;;;;;;;;;;;AAAA,2CAAuJ;AACvJ,+DAA4D;AAIrD,IAAM,iBAAiB,GAAvB,MAAM,iBAAiB;IAC5B,YAA6B,aAA6B;QAA7B,kBAAa,GAAb,aAAa,CAAgB;IAAG,CAAC;CA8D/D,CAAA;AA/DY,8CAAiB;4BAAjB,iBAAiB;IAD7B,IAAA,mBAAU,EAAC,SAAS,CAAC;qCAEwB,+BAAc;GAD/C,iBAAiB,CA+D7B"}
