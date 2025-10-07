@@ -163,7 +163,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     DebugController,
     AuthController,
     WishlistController,
-    SupabaseTestController,
+    //SupabaseTestController,
   ],
   providers: [
     NavigationService,
@@ -175,7 +175,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AuthService,
     JwtStrategy,
     WishlistService,
-    SupabaseTestService,
+    //SupabaseTestService,
   ],
 })
 export class AppModule {
