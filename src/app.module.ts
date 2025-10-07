@@ -73,11 +73,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           // Example: ep-cool-name-12345.us-east-2.aws.neon.tech -> ep-cool-name-12345
           const hostname = url.hostname;
           let endpointId = null;
+          let modifiedPassword = url.password;
           
           if (hostname.includes('neon.tech')) {
             const match = hostname.match(/^(ep-[^.]+)/);
             if (match) {
               endpointId = match[1];
+              // Use Neon's password workaround: endpoint=<id>;<password>
+              modifiedPassword = `endpoint=${endpointId};${url.password}`;
               console.log(`Detected Neon endpoint: ${endpointId}`);
             }
           }
@@ -86,13 +89,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           let resolvedHost = configService.get('DB_HOST_IP') || url.hostname;
           console.log(`Using database host: ${resolvedHost}`);
           
-          // Build connection options
-          const connectionOptions: any = {
+          return {
             type: 'postgres',
             host: resolvedHost,
             port: parseInt(url.port || '5432', 10),
             username: url.username,
-            password: url.password,
+            password: modifiedPassword,
             database: url.pathname.slice(1),
             entities: [
               Navigation,
@@ -114,13 +116,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
               rejectUnauthorized: false, 
             },
           };
-          
-          // Add endpoint option for Neon
-          if (endpointId) {
-            connectionOptions.extra.options = `-c endpoint=${endpointId}`;
-          }
-          
-          return connectionOptions;
         }
         
         return {
