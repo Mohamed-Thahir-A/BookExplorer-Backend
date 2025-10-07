@@ -5,8 +5,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
-import { SupabaseTestService } from './services/supabase-test.service';
-import { SupabaseTestController } from './controllers/supabase-test.controller';
+// import { SupabaseTestService } from './services/supabase-test.service';
+// import { SupabaseTestController } from './controllers/supabase-test.controller';
 
 import { User } from './entities/user.entity';
 import { Navigation } from './entities/navigation.entity';
@@ -69,21 +69,25 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           // Parse the DATABASE_URL to extract components
           const url = new URL(databaseUrl);
           
-          // Manually resolve hostname to IPv4 only
-          const dns = require('dns').promises;
-          let resolvedHost = url.hostname;
+          // Extract endpoint ID from hostname for Neon
+          // Example: ep-cool-name-12345.us-east-2.aws.neon.tech -> ep-cool-name-12345
+          const hostname = url.hostname;
+          let endpointId = null;
           
-          try {
-            const addresses = await dns.resolve4(url.hostname);
-            if (addresses && addresses.length > 0) {
-              resolvedHost = addresses[0]; // Use first IPv4 address
-              console.log(`Resolved ${url.hostname} to IPv4: ${resolvedHost}`);
+          if (hostname.includes('neon.tech')) {
+            const match = hostname.match(/^(ep-[^.]+)/);
+            if (match) {
+              endpointId = match[1];
+              console.log(`Detected Neon endpoint: ${endpointId}`);
             }
-          } catch (error) {
-            console.warn(`DNS resolution failed, using hostname: ${url.hostname}`, error);
           }
           
-          return {
+          // Use hardcoded IPv4 if DNS fails on Render
+          let resolvedHost = configService.get('DB_HOST_IP') || url.hostname;
+          console.log(`Using database host: ${resolvedHost}`);
+          
+          // Build connection options
+          const connectionOptions: any = {
             type: 'postgres',
             host: resolvedHost,
             port: parseInt(url.port || '5432', 10),
@@ -110,6 +114,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
               rejectUnauthorized: false, 
             },
           };
+          
+          // Add endpoint option for Neon
+          if (endpointId) {
+            connectionOptions.extra.options = `-c endpoint=${endpointId}`;
+          }
+          
+          return connectionOptions;
         }
         
         return {
@@ -163,7 +174,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     DebugController,
     AuthController,
     WishlistController,
-    //SupabaseTestController,
+    // SupabaseTestController,
   ],
   providers: [
     NavigationService,
@@ -175,7 +186,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AuthService,
     JwtStrategy,
     WishlistService,
-    //SupabaseTestService,
+    // SupabaseTestService,
   ],
 })
 export class AppModule {
