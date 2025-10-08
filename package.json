@@ -21,8 +21,7 @@
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "migration:show": "npm run typeorm -- migration:show -d src/data-source.ts",
     "preinstall": "mkdir -p /tmp/playwright",
-    "postinstall": "PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright npx playwright install chromium",
-    "render-build": "npm install && npm run build"
+    "postinstall": "PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright npx playwright install chromium"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
