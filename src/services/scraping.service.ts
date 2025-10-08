@@ -1,5 +1,4 @@
-process.env.PLAYWRIGHT_BROWSERS_PATH = '/usr/src/app/.playwright';
-
+process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/render/project/.playwright';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
