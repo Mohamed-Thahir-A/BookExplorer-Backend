@@ -8,7 +8,9 @@ import { Category } from '../entities/category.entity';
 import { Product } from '../entities/product.entity';
 import { ProductDetail } from '../entities/product-detail.entity';
 import { execSync } from 'child_process';
-
+import { Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ScrapeJob, ScrapeJobStatus, ScrapeTargetType } from '../entities/scrape-job.entity';
 
 
@@ -106,11 +108,16 @@ private async launchBrowser(): Promise<Browser> {
   this.logger.log('Launching Playwright Chromium in Render environment...');
 
   try {
-    // ✅ Ensure Chromium is installed at runtime (Render may clear cache)
-    execSync('npx playwright install chromium', { stdio: 'inherit' });
+    // ✅ Use the browser path installed at build time
+    const browserPath = '/opt/render/project/.playwright/chromium-1194/chrome-linux/headless_shell';
+    if (!fs.existsSync(browserPath)) {
+      this.logger.error(`❌ Chromium not found at ${browserPath}`);
+      throw new Error('Chromium not found – check build step');
+    }
 
     const browser = await chromium.launch({
       headless: true,
+      executablePath: browserPath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -118,17 +125,14 @@ private async launchBrowser(): Promise<Browser> {
         '--disable-gpu',
         '--single-process',
         '--no-zygote',
-        '--disable-extensions',
-        '--disable-background-networking',
-        '--disable-software-rasterizer',
       ],
     });
 
-    this.logger.log('✅ Chromium launched successfully.');
+    this.logger.log('✅ Playwright Chromium launched successfully');
     return browser;
-  } catch (error) {
-    this.logger.error('❌ Failed to launch Playwright Chromium:', error);
-    throw error;
+  } catch (err) {
+    this.logger.error('❌ Failed to launch Playwright Chromium:', err);
+    throw err;
   }
 }
 
