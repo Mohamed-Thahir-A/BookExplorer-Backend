@@ -8,7 +8,6 @@ import { Category } from '../entities/category.entity';
 import { Product } from '../entities/product.entity';
 import { ProductDetail } from '../entities/product-detail.entity';
 import { execSync } from 'child_process';
-import { Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ScrapeJob, ScrapeJobStatus, ScrapeTargetType } from '../entities/scrape-job.entity';
