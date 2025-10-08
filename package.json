@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "0.0.1",
   "description": "Product Data Explorer Backend",
-  "author": "Your Name",
+  "author": "Mohamed Thahir",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -21,7 +21,8 @@
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "migration:show": "npm run typeorm -- migration:show -d src/data-source.ts",
     "preinstall": "mkdir -p /tmp/playwright",
-    "postinstall": "PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright npx playwright install chromium"
+    "postinstall": "PLAYWRIGHT_BROWSERS_PATH=/tmp/playwright npx playwright install chromium",
+    "render-build": "npm install && npm run build"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",

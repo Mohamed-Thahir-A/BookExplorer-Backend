@@ -116,10 +116,9 @@ private async launchBrowser(): Promise<Browser> {
       '--disable-background-networking',
       '--disable-software-rasterizer',
     ],
-    chromiumSandbox: false, // ✅ prevent sandbox errors in container
   });
+}
 
-  }
 
   private async setupPage(page: Page): Promise<void> {
     await page.setExtraHTTPHeaders({
