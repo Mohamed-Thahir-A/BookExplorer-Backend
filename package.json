@@ -6,8 +6,8 @@
   "private": true,
   "license": "MIT",
 "scripts": {
-  "preinstall": "mkdir -p /opt/render/project/.playwright",
-  "build": "PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/.playwright node node_modules/playwright-core/cli.js install chromium && node node_modules/@nestjs/cli/bin/nest.js build",
+  "preinstall": "mkdir -p /opt/render/project/src/.playwright",
+  "build": "PLAYWRIGHT_BROWSERS_PATH=/opt/render/project/src/.playwright node node_modules/playwright-core/cli.js install chromium && node node_modules/@nestjs/cli/bin/nest.js build",
   "start:prod": "node dist/main",
   "start": "node dist/main",
   "dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",

@@ -107,11 +107,15 @@ private async launchBrowser(): Promise<Browser> {
   this.logger.log('Launching Playwright Chromium in Render environment...');
 
   try {
-    // ✅ Use the browser path installed at build time
-    const browserPath = '/opt/render/project/.playwright/chromium-1194/chrome-linux/headless_shell';
+    const basePath = '/opt/render/project/src/.playwright';
+    const chromiumDir = fs.readdirSync(basePath).find(d => d.startsWith('chromium-'));
+    if (!chromiumDir) throw new Error('Chromium not installed in .playwright folder');
+
+    const browserPath = path.join(basePath, chromiumDir, 'chrome-linux', 'headless_shell');
+    this.logger.log(`Using Chromium from: ${browserPath}`);
+
     if (!fs.existsSync(browserPath)) {
-      this.logger.error(`❌ Chromium not found at ${browserPath}`);
-      throw new Error('Chromium not found – check build step');
+      throw new Error(`Chromium not found at path: ${browserPath}`);
     }
 
     const browser = await chromium.launch({
