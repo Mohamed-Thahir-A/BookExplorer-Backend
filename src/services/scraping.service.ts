@@ -111,16 +111,28 @@ private async launchBrowser(): Promise<Browser> {
     const chromiumDir = fs.readdirSync(basePath).find(d => d.startsWith('chromium-'));
     if (!chromiumDir) throw new Error('Chromium not installed in .playwright folder');
 
-    const browserPath = path.join(basePath, chromiumDir, 'chrome-linux', 'headless_shell');
-    this.logger.log(`Using Chromium from: ${browserPath}`);
+    // Try both possible executables
+    const chromeBase = path.join(basePath, chromiumDir, 'chrome-linux');
+    const shellPath = path.join(chromeBase, 'headless_shell');
+    const chromePath = path.join(chromeBase, 'chrome');
 
-    if (!fs.existsSync(browserPath)) {
-      throw new Error(`Chromium not found at path: ${browserPath}`);
+    const executablePath = fs.existsSync(shellPath)
+      ? shellPath
+      : fs.existsSync(chromePath)
+      ? chromePath
+      : null;
+
+    if (!executablePath) {
+      throw new Error(
+        `Chromium not found in expected paths: ${shellPath} or ${chromePath}`,
+      );
     }
+
+    this.logger.log(`Using Chromium executable: ${executablePath}`);
 
     const browser = await chromium.launch({
       headless: true,
-      executablePath: browserPath,
+      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
