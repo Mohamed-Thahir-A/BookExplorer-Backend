@@ -107,7 +107,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
               Wishlist,
               Book,
             ],
-            synchronize: false,
+            synchronize: true,
             logging: false,
             extra: {
               connectionTimeoutMillis: 10000,
