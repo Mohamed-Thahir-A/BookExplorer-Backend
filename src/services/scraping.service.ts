@@ -1,4 +1,5 @@
-process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/render/.cache/ms-playwright';
+process.env.PLAYWRIGHT_BROWSERS_PATH = '/usr/src/app/.playwright';
+
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -7,6 +8,7 @@ import { Navigation } from '../entities/navigation.entity';
 import { Category } from '../entities/category.entity';
 import { Product } from '../entities/product.entity';
 import { ProductDetail } from '../entities/product-detail.entity';
+import { execSync } from 'child_process';
 
 import { ScrapeJob, ScrapeJobStatus, ScrapeTargetType } from '../entities/scrape-job.entity';
 
@@ -103,21 +105,34 @@ export class ScrapingService {
 
 private async launchBrowser(): Promise<Browser> {
   this.logger.log('Launching Playwright Chromium in Render environment...');
-  return await chromium.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',
-      '--no-zygote',
-      '--disable-extensions',
-      '--disable-background-networking',
-      '--disable-software-rasterizer',
-    ],
-  });
+
+  try {
+    // ✅ Ensure Chromium is installed at runtime (Render may clear cache)
+    execSync('npx playwright install chromium', { stdio: 'inherit' });
+
+    const browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-software-rasterizer',
+      ],
+    });
+
+    this.logger.log('✅ Chromium launched successfully.');
+    return browser;
+  } catch (error) {
+    this.logger.error('❌ Failed to launch Playwright Chromium:', error);
+    throw error;
+  }
 }
+
 
 
   private async setupPage(page: Page): Promise<void> {
