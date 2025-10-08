@@ -21,7 +21,6 @@
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "migration:show": "npm run typeorm -- migration:show -d src/data-source.ts",
     "postinstall": "npx playwright install --with-deps chromium"
-  
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
@@ -43,7 +42,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
-    "playwright": "^1.0.0",
+    "playwright": "^1.56.0",
     "reflect-metadata": "^0.1.0",
     "rxjs": "^7.0.0",
     "typeorm": "^0.3.0",
