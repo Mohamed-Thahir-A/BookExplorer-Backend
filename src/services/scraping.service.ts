@@ -136,6 +136,11 @@ private async launchBrowser(): Promise<Browser> {
         '--disable-gpu',
         '--single-process',
         '--no-zygote',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-software-rasterizer',
+        '--disable-logging',          // ⬅️ suppress browser logs
+        '--v=0',  
       ],
     });
 
@@ -404,207 +409,217 @@ private async launchBrowser(): Promise<Browser> {
 async scrapeBooks(forceRefresh: boolean = false): Promise<Product[]> {
   this.logger.log('=== STARTING ENHANCED BOOK SCRAPING WITH DETAILED INFORMATION ===');
 
-  // ✅ Prevent duplicate scraping: reuse the running Promise
-  if (this.isScraping && this.scrapingPromise) {
-    this.logger.log('🔄 Reusing existing scraping process (already in progress)');
-    return this.scrapingPromise;
+  if (this.isScraping) {
+    this.logger.log('🛑 SCRAPING ALREADY IN PROGRESS - SKIPPING DUPLICATE REQUEST');
+    throw new Error('Scraping already in progress. Please wait for current scraping to complete.');
   }
 
-  // ✅ Mark scraping in progress and store the Promise
-  this.isScraping = true;
-  this.scrapingPromise = (async () => {
-    if (!forceRefresh) {
-      const isFresh = await this.isCacheFresh(
-        ScrapeTargetType.PRODUCT,
-        this.CACHE_TIMEOUTS.PRODUCTS
-      );
-
-      if (isFresh) {
-        this.logger.log('Returning cached World of Books products');
-        return await this.getCachedProducts();
-      }
-    }
-
-    this.logger.log('🚀 Starting enhanced product scraping with detailed information extraction');
-    const scrapeJob = await this.createScrapeJob(
-      this.WORLD_OF_BOOKS_CONFIG.baseUrl,
-      ScrapeTargetType.PRODUCT
+  if (!forceRefresh) {
+    const isFresh = await this.isCacheFresh(
+      ScrapeTargetType.PRODUCT,
+      this.CACHE_TIMEOUTS.PRODUCTS
     );
+    if (isFresh) {
+      this.logger.log('Returning cached World of Books products');
+      return await this.getCachedProducts();
+    }
+  }
 
-    const allScrapedProducts: Product[] = [];
+  this.isScraping = true;
+  this.logger.log('🚀 Starting enhanced product scraping with detailed information extraction');
 
-    try {
-      // 🧩 Launch a new Chromium instance for EACH category to prevent crashes
-      for (const categoryUrl of this.WORLD_OF_BOOKS_CONFIG.categoryUrls) {
-        let browser: Browser | null = null;
+  const scrapeJob = await this.createScrapeJob(
+    this.WORLD_OF_BOOKS_CONFIG.baseUrl,
+    ScrapeTargetType.PRODUCT
+  );
+
+  const allScrapedProducts: Product[] = [];
+
+  try {
+    // 🧩 Launch a new Chromium instance for EACH category to prevent crashes
+    for (const categoryUrl of this.WORLD_OF_BOOKS_CONFIG.categoryUrls) {
+      let browser: Browser | null = null;
+      try {
+        this.logger.log(`🟢 Starting scrape for category: ${categoryUrl}`);
+
+        browser = await this.launchBrowser();
+        const page = await browser.newPage();
+        await this.setupPage(page);
+
+        // ✅ Extended timeout + retry-on-failure logic
+        let response = null;
         try {
-          this.logger.log(`🟢 Starting scrape for category: ${categoryUrl}`);
-
-          browser = await this.launchBrowser();
-          const page = await browser.newPage();
-          await this.setupPage(page);
-
-          const response = await page.goto(categoryUrl, {
+          response = await page.goto(categoryUrl, { 
             waitUntil: 'domcontentloaded',
-            timeout: 30000,
+            timeout: 60000, // 60 seconds instead of 30
           });
+        } catch (err) {
+          this.logger.warn(`⚠️ First navigation attempt failed for ${categoryUrl}, retrying...`);
+          await this.delay(5000);
+          response = await page.goto(categoryUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: 60000,
+          });
+        }
 
-          const currentUrl = page.url();
-          if (!currentUrl.includes('worldofbooks.com')) {
-            this.logger.warn(`⚠️ Failed to reach World of Books. Current URL: ${currentUrl}`);
-            continue;
-          }
+        const currentUrl = page.url();
+        if (!currentUrl.includes('worldofbooks.com')) {
+          this.logger.warn(`⚠️ Failed to reach World of Books. Current URL: ${currentUrl}`);
+          continue;
+        }
 
-          this.logger.log(`✅ Successfully reached category: ${currentUrl}`);
-          await this.delay(2000, 4000);
+        this.logger.log(`✅ Successfully reached category: ${currentUrl}`);
+        await this.delay(2000, 4000);
 
-          const products = await page.evaluate((currentUrl) => {
-            const items: ScrapedProduct[] = [];
-            const productSelectors = [
-              '[data-testid*="product"]',
-              '.product-card',
-              '.book-item',
-              '.product-item',
-              '.grid-item',
-              'article[class*="product"]',
-              'div[class*="product"]',
-              'li[class*="product"]'
-            ];
+        const products = await page.evaluate((currentUrl) => {
+          const items: ScrapedProduct[] = [];
+          const productSelectors = [
+            '[data-testid*="product"]',
+            '.product-card',
+            '.book-item',
+            '.product-item',
+            '.grid-item',
+            'article[class*="product"]',
+            'div[class*="product"]',
+            'li[class*="product"]'
+          ];
 
-            productSelectors.forEach(selector => {
-              const elements = document.querySelectorAll(selector);
-              elements.forEach((element, index) => {
-                try {
-                  let title = '';
-                  const titleSelectors = [
-                    '[data-testid="title"]',
-                    'h1', 'h2', 'h3', 'h4',
-                    '[class*="title"]',
-                    '[class*="name"]',
-                    'a[class*="title"]'
-                  ];
-                  for (const titleSelector of titleSelectors) {
-                    const titleElement = element.querySelector(titleSelector);
-                    if (titleElement) {
-                      title = titleElement.textContent?.trim() || '';
-                      if (title) break;
-                    }
+          productSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach((element, index) => {
+              try {
+                let title = '';
+                const titleSelectors = [
+                  '[data-testid="title"]',
+                  'h1', 'h2', 'h3', 'h4',
+                  '[class*="title"]',
+                  '[class*="name"]',
+                  'a[class*="title"]'
+                ];
+                for (const titleSelector of titleSelectors) {
+                  const titleElement = element.querySelector(titleSelector);
+                  if (titleElement) {
+                    title = titleElement.textContent?.trim() || '';
+                    if (title) break;
                   }
-
-                  let priceText = '';
-                  const priceSelectors = [
-                    '[data-testid="price"]',
-                    '[class*="price"]',
-                    '.price',
-                    '[class*="cost"]',
-                    '.current-price'
-                  ];
-                  for (const priceSelector of priceSelectors) {
-                    const priceElement = element.querySelector(priceSelector);
-                    if (priceElement) {
-                      priceText = priceElement.textContent?.trim() || '';
-                      if (priceText) break;
-                    }
-                  }
-
-                  let imageUrl = '';
-                  const imgElement = element.querySelector('img');
-                  if (imgElement) {
-                    imageUrl = imgElement.src || imgElement.getAttribute('data-src') || '';
-                    if (imageUrl.startsWith('//')) {
-                      imageUrl = 'https:' + imageUrl;
-                    } else if (imageUrl.startsWith('/')) {
-                      imageUrl = 'https://www.worldofbooks.com' + imageUrl;
-                    }
-                  }
-
-                  let productUrl = '';
-                  const linkElement = element.querySelector('a');
-                  if (linkElement) {
-                    productUrl = (linkElement as HTMLAnchorElement).href || '';
-                    if (productUrl.startsWith('/')) {
-                      productUrl = 'https://www.worldofbooks.com' + productUrl;
-                    }
-                  }
-
-                  let author = '';
-                  const authorSelectors = [
-                    '[data-testid="author"]',
-                    '[class*="author"]',
-                    '.author',
-                    '.product-author'
-                  ];
-                  for (const authorSelector of authorSelectors) {
-                    const authorElement = element.querySelector(authorSelector);
-                    if (authorElement) {
-                      author = authorElement.textContent?.trim() || '';
-                      if (author) break;
-                    }
-                  }
-
-                  const isIndividualProduct = productUrl.includes('/products/') &&
-                    title.length > 5 &&
-                    !title.toLowerCase().match(/bestselling|collection|books$/);
-
-                  if (title && (title.length > 3 || imageUrl)) {
-                    items.push({
-                      title: title || `Book ${index + 1}`,
-                      priceText: priceText || 'Price not available',
-                      imageUrl,
-                      productUrl: productUrl || currentUrl,
-                      isIndividualProduct,
-                      categoryHint: currentUrl,
-                      author: author || undefined
-                    });
-                  }
-                } catch (e) {
-                  console.log('Error processing product element:', e);
                 }
-              });
+
+                let priceText = '';
+                const priceSelectors = [
+                  '[data-testid="price"]',
+                  '[class*="price"]',
+                  '.price',
+                  '[class*="cost"]',
+                  '.current-price'
+                ];
+                for (const priceSelector of priceSelectors) {
+                  const priceElement = element.querySelector(priceSelector);
+                  if (priceElement) {
+                    priceText = priceElement.textContent?.trim() || '';
+                    if (priceText) break;
+                  }
+                }
+
+                let imageUrl = '';
+                const imgElement = element.querySelector('img');
+                if (imgElement) {
+                  imageUrl = imgElement.src || imgElement.getAttribute('data-src') || '';
+                  if (imageUrl.startsWith('//')) {
+                    imageUrl = 'https:' + imageUrl;
+                  } else if (imageUrl.startsWith('/')) {
+                    imageUrl = 'https://www.worldofbooks.com' + imageUrl;
+                  }
+                }
+
+                let productUrl = '';
+                const linkElement = element.querySelector('a');
+                if (linkElement) {
+                  productUrl = (linkElement as HTMLAnchorElement).href || '';
+                  if (productUrl.startsWith('/')) {
+                    productUrl = 'https://www.worldofbooks.com' + productUrl;
+                  }
+                }
+
+                let author = '';
+                const authorSelectors = [
+                  '[data-testid="author"]',
+                  '[class*="author"]',
+                  '.author',
+                  '.product-author'
+                ];
+                for (const authorSelector of authorSelectors) {
+                  const authorElement = element.querySelector(authorSelector);
+                  if (authorElement) {
+                    author = authorElement.textContent?.trim() || '';
+                    if (author) break;
+                  }
+                }
+
+                const isIndividualProduct = productUrl.includes('/products/') &&
+                  title.length > 5 &&
+                  !title.toLowerCase().match(/bestselling|collection|books$/);
+
+                if (title && (title.length > 3 || imageUrl)) {
+                  items.push({
+                    title: title || `Book ${index + 1}`,
+                    priceText: priceText || 'Price not available',
+                    imageUrl,
+                    productUrl: productUrl || currentUrl,
+                    isIndividualProduct,
+                    categoryHint: currentUrl,
+                    author: author || undefined
+                  });
+                }
+              } catch (e) {
+                console.log('Error processing product element:', e);
+              }
             });
-            return items;
-          }, categoryUrl);
+          });
+          return items;
+        }, categoryUrl);
 
-          this.logger.log(`📦 Extracted ${products.length} items from ${categoryUrl}`);
-          const individualProducts = products.filter(p => p.isIndividualProduct);
-          this.logger.log(`🧩 Found ${individualProducts.length} individual products`);
+        this.logger.log(`📦 Extracted ${products.length} items from ${categoryUrl}`);
+        const individualProducts = products.filter(p => p.isIndividualProduct);
+        this.logger.log(`🧩 Found ${individualProducts.length} individual products`);
 
-          const savedProducts = await this.saveProductsWithEnhancedData(
-            individualProducts,
-            categoryUrl,
-            browser
-          );
-          allScrapedProducts.push(...savedProducts);
+        const savedProducts = await this.saveProductsWithEnhancedData(
+          individualProducts,
+          categoryUrl,
+          browser
+        );
+        allScrapedProducts.push(...savedProducts);
 
-          await this.delay(3000, 5000);
-        } catch (error) {
-          this.logger.error(`❌ Error scraping category ${categoryUrl}: ${error.message}`);
-        } finally {
-          if (browser) await browser.close();
+        await this.delay(3000, 5000);
+      } catch (error) {
+        this.logger.error(`❌ Error scraping category ${categoryUrl}: ${error.message}`);
+      } finally {
+        if (browser) {
+          await browser.close();
+          this.logger.log(`🧹 Browser closed for category: ${categoryUrl}`);
+          await this.delay(2000, 3000); // Give system time before next launch
         }
       }
-
-      if (allScrapedProducts.length === 0) {
-        throw new Error('No products were saved');
-      }
-
-      await this.updateCategoryProductCounts();
-      await this.updateScrapeJob(scrapeJob.id, ScrapeJobStatus.COMPLETED);
-      this.logger.log(`✅ Successfully scraped ${allScrapedProducts.length} products with enhanced data`);
-      return allScrapedProducts;
-
-    } catch (error) {
-      this.logger.error(`❌ ENHANCED SCRAPING FAILED: ${error.message}`);
-      await this.updateScrapeJob(scrapeJob.id, ScrapeJobStatus.FAILED, error.message);
-      throw error;
-    } finally {
-      this.isScraping = false;
-      this.scrapingPromise = null;
     }
-  })();
 
-  return this.scrapingPromise;
+    if (allScrapedProducts.length === 0) {
+      throw new Error('No products were saved');
+    }
+
+    await this.updateCategoryProductCounts();
+    await this.updateScrapeJob(scrapeJob.id, ScrapeJobStatus.COMPLETED);
+    this.logger.log(`✅ Successfully scraped ${allScrapedProducts.length} products with enhanced data`);
+    return allScrapedProducts;
+
+  } catch (error) {
+    this.logger.error(`❌ ENHANCED SCRAPING FAILED: ${error.message}`);
+    await this.updateScrapeJob(scrapeJob.id, ScrapeJobStatus.FAILED, error.message);
+    throw error;
+  } finally {
+    this.isScraping = false;
+    this.scrapingPromise = null;
+  }
 }
+
 
 
 
