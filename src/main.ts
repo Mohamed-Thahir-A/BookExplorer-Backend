@@ -48,7 +48,7 @@ async function bootstrap() {
 
   logger.log('=================================');
   logger.log(`Backend server running on port: ${port}`);
-  logger.log(`API Documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`API Documentation available at: https://book-explorer-books.netlify.app:${port}/api/docs`);
   logger.log('=================================');
 }
 
